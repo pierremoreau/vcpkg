@@ -333,7 +333,7 @@ namespace vcpkg::PortFileProvider
         auto maybe_versions_json_path = get_versions_json_path(m_impl->paths, port_name);
         Checks::check_exit(VCPKG_LINE_INFO,
                            maybe_versions_json_path.has_value(),
-                           "Couldn't find a versions database file: %s.json.",
+                           "Error: Couldn't find a versions database file: %s.json.",
                            port_name);
         auto versions_json_path = maybe_versions_json_path.value_or_exit(VCPKG_LINE_INFO);
 
@@ -365,7 +365,7 @@ namespace vcpkg::PortFileProvider
                 std::regex is_commit_sha("^[\\da-f]{40}$");
                 Checks::check_exit(VCPKG_LINE_INFO,
                                    std::regex_match(version.git_tree, is_commit_sha),
-                                   "Invalid commit SHA in `git-tree` for %s %s: %s",
+                                   "Error: Invalid commit SHA in `git-tree` for %s %s: %s",
                                    port_name,
                                    out_string,
                                    version.git_tree);
@@ -395,9 +395,8 @@ namespace vcpkg::PortFileProvider
         {
             std::string out_string;
             version_spec.version.to_string(out_string);
-            return Strings::concat("No git object SHA for entry %s at version %s.",
-                                   version_spec.port_name,
-                                   out_string);
+            return Strings::concat(
+                "Error: No git object SHA for entry %s at version %s.", version_spec.port_name, out_string);
         }
 
         const std::string git_tree = git_tree_cache_it->second;
@@ -408,7 +407,9 @@ namespace vcpkg::PortFileProvider
         {
             if (scf->get()->core_paragraph->name == version_spec.port_name)
             {
-                return SourceControlFileLocation{std::move(*scf), std::move(port_directory)};
+                m_impl->control_cache
+                    .emplace(version_spec, SourceControlFileLocation{std::move(*scf), std::move(port_directory)})
+                    .first->second;
             }
             return Strings::format("Error: Failed to load port from %s: names did not match: '%s' != '%s'",
                                    fs::u8string(port_directory),
@@ -477,7 +478,10 @@ namespace vcpkg::PortFileProvider
             std::map<std::string, VersionSpec> cache;
             for (auto&& kv_pair : result)
             {
-                cache.emplace(kv_pair.first, VersionSpec(kv_pair.first, kv_pair.second.get_value(), kv_pair.second.get_port_version(), Scheme::Unknown));
+                cache.emplace(
+                    kv_pair.first,
+                    VersionSpec(
+                        kv_pair.first, kv_pair.second.get_value(), kv_pair.second.get_port_version(), Scheme::Unknown));
             }
             return cache;
         });
