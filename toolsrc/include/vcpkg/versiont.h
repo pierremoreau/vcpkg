@@ -11,6 +11,8 @@ namespace vcpkg
         VersionT(const std::string& value, int port_version);
 
         std::string to_string() const;
+        std::string get_value() const { return value; }
+        int get_port_version() const { return port_version; }
 
         friend bool operator==(const VersionT& left, const VersionT& right);
         friend bool operator!=(const VersionT& left, const VersionT& right);

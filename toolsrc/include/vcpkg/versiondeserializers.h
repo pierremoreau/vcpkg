@@ -12,7 +12,7 @@ namespace vcpkg
 {
     struct VersionDbEntry
     {
-        const VersionT version;
+        const Versions::Version version;
         const Versions::Scheme scheme;
         const std::string git_tree;
 
@@ -20,7 +20,7 @@ namespace vcpkg
                        int port_version,
                        Versions::Scheme scheme,
                        const std::string& git_tree)
-            : version(VersionT(version_string, port_version)), scheme(scheme), git_tree(git_tree)
+            : version(version_string, port_version), scheme(scheme), git_tree(git_tree)
         {
         }
     };

@@ -359,12 +359,15 @@ namespace vcpkg::PortFileProvider
 
             for (const auto& version : db_entries)
             {
+                std::string out_string;
+                version.version.to_string(out_string);
+
                 std::regex is_commit_sha("^[\\da-f]{40}$");
                 Checks::check_exit(VCPKG_LINE_INFO,
                                    std::regex_match(version.git_tree, is_commit_sha),
                                    "Invalid commit SHA in `git-tree` for %s %s: %s",
                                    port_name,
-                                   version.version.to_string(),
+                                   out_string,
                                    version.git_tree);
 
                 VersionSpec spec(port_name, version.version, version.scheme);
@@ -390,9 +393,11 @@ namespace vcpkg::PortFileProvider
         auto git_tree_cache_it = m_impl->git_tree_cache.find(version_spec);
         if (git_tree_cache_it == m_impl->git_tree_cache.end())
         {
+            std::string out_string;
+            version_spec.version.to_string(out_string);
             return Strings::concat("No git object SHA for entry %s at version %s.",
                                    version_spec.port_name,
-                                   version_spec.version.to_string());
+                                   out_string);
         }
 
         const std::string git_tree = git_tree_cache_it->second;
@@ -416,19 +421,25 @@ namespace vcpkg::PortFileProvider
             "Error: Failed to load port %s from %s", version_spec.port_name, fs::u8string(port_directory));
     }
 
+    ExpectedS<const SourceControlFileLocation&> VersionedPortfileProvider::get_control_file(
+        const std::string& name, const Version& version) const
+    {
+        return get_control_file(VersionSpec(name, version, Scheme::Unknown));
+    }
+
     BaselineProvider::BaselineProvider(const VcpkgPaths& paths, const std::string& baseline)
         : m_impl(std::make_unique<details::BaselineProviderImpl>(paths, baseline))
     {
     }
     BaselineProvider::~BaselineProvider() { }
 
-    Optional<VersionSpec> BaselineProvider::get_baseline_version(const std::string& port_name) const
+    Optional<Version> BaselineProvider::get_baseline_version(const std::string& port_name) const
     {
         const auto& cache = get_baseline_cache();
         auto it = cache.find(port_name);
         if (it != cache.end())
         {
-            return it->second;
+            return it->second.version;
         }
         return nullopt;
     }
@@ -466,7 +477,7 @@ namespace vcpkg::PortFileProvider
             std::map<std::string, VersionSpec> cache;
             for (auto&& kv_pair : result)
             {
-                cache.emplace(kv_pair.first, VersionSpec(kv_pair.first, kv_pair.second, Scheme::String));
+                cache.emplace(kv_pair.first, VersionSpec(kv_pair.first, kv_pair.second.get_value(), kv_pair.second.get_port_version(), Scheme::Unknown));
             }
             return cache;
         });

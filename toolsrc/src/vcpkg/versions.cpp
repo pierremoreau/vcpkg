@@ -2,7 +2,9 @@
 
 namespace vcpkg::Versions
 {
-    VersionSpec::VersionSpec(const std::string& port_name, const VersionT& version, Scheme scheme)
+    Version::Version(const std::string& text, int port_version) : text(text), port_version(port_version) { }
+
+    VersionSpec::VersionSpec(const std::string& port_name, const Version& version, Scheme scheme)
         : port_name(port_name), version(version), scheme(scheme)
     {
     }
@@ -28,7 +30,9 @@ namespace vcpkg::Versions
         using std::size_t;
         using std::string;
 
-        return ((hash<string>()(key.port_name) ^ (hash<string>()(key.version.to_string()) << 1)) >> 1) ^
+        std::string out_string;
+        key.version.to_string(out_string);
+        return ((hash<string>()(key.port_name) ^ (hash<string>()(out_string) << 1)) >> 1) ^
                (hash<int>()(static_cast<int>(key.scheme)) << 1);
     }
 }
