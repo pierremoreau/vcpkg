@@ -10,7 +10,14 @@ namespace vcpkg
 
     std::string VersionT::to_string() const
     {
-        return port_version == 0 ? value : Strings::format("%s#%d", value, port_version);
+        std::string r;
+        this->to_string(r);
+        return r;
+    }
+    void VersionT::to_string(std::string& out) const
+    {
+        out += value;
+        if (port_version != 0) Strings::append(out, '#', port_version);
     }
 
     bool operator==(const VersionT& left, const VersionT& right)

@@ -107,6 +107,10 @@ namespace vcpkg
         const fs::path& get_tool_exe(const std::string& tool) const;
         const std::string& get_tool_version(const std::string& tool) const;
 
+        // Git manipulation
+        fs::path git_checkout_baseline(const std::string& commit_sha) const;
+        fs::path git_checkout_port(const std::string& port_name, const std::string& git_tree) const;
+
         Optional<const Json::Object&> get_manifest() const;
         Optional<const fs::path&> get_manifest_path() const;
         const Configuration& get_configuration() const;
@@ -133,5 +137,20 @@ namespace vcpkg
 
     private:
         std::unique_ptr<details::VcpkgPathsImpl> m_pimpl;
+
+        static void git_checkout_subpath(const VcpkgPaths& paths,
+                                         const std::string& commit_sha,
+                                         const fs::path& subpath,
+                                         const fs::path& local_repo,
+                                         const fs::path& destination,
+                                         const fs::path& dot_git_dir,
+                                         const fs::path& work_tree);
+
+        static void git_checkout_object(const VcpkgPaths& paths,
+                                        const std::string& git_object,
+                                        const fs::path& local_repo,
+                                        const fs::path& destination,
+                                        const fs::path& dot_git_dir,
+                                        const fs::path& work_tree);
     };
 }

@@ -11,13 +11,13 @@ namespace vcpkg
         VersionT(const std::string& value, int port_version);
 
         std::string to_string() const;
+        void to_string(std::string& out) const;
 
         friend bool operator==(const VersionT& left, const VersionT& right);
         friend bool operator!=(const VersionT& left, const VersionT& right);
 
         friend struct VersionTMapLess;
 
-    private:
         std::string value;
         int port_version;
     };

@@ -832,25 +832,51 @@ namespace vcpkg::Install
                 // remove "core" because resolve_deps_as_top_level uses default-inversion
                 features.erase(core_it);
             }
-            auto specs = resolve_deps_as_top_level(manifest_scf, default_triplet, features, var_provider);
 
-            auto install_plan = Dependencies::create_feature_install_plan(provider, var_provider, specs, {});
-
-            for (InstallPlanAction& action : install_plan.install_actions)
+            if (args.versions_enabled())
             {
-                action.build_options = install_plan_options;
-                action.build_options.use_head_version = Build::UseHeadVersion::NO;
-                action.build_options.editable = Build::Editable::NO;
-            }
+                PortFileProvider::VersionedPortfileProvider verprovider(paths);
+                PortFileProvider::BaselineProvider baseprovider(paths, "cfb807dfbdf5cf4dc9e4e2dc2e37f55fec4157bb");
 
-            Commands::SetInstalled::perform_and_exit_ex(args,
-                                                        paths,
-                                                        provider,
-                                                        *binaryprovider,
-                                                        var_provider,
-                                                        std::move(install_plan),
-                                                        dry_run ? Commands::DryRun::Yes : Commands::DryRun::No,
-                                                        pkgsconfig);
+                auto install_plan =
+                    Dependencies::create_versioned_install_plan(verprovider,
+                                                                baseprovider,
+                                                                var_provider,
+                                                                manifest_scf.core_paragraph->dependencies,
+                                                                manifest_scf.core_paragraph->overrides,
+                                                                {manifest_scf.core_paragraph->name, default_triplet})
+                        .value_or_exit(VCPKG_LINE_INFO);
+                for (InstallPlanAction& action : install_plan.install_actions)
+                {
+                    action.build_options = install_plan_options;
+                    action.build_options.use_head_version = Build::UseHeadVersion::NO;
+                    action.build_options.editable = Build::Editable::NO;
+                }
+                Dependencies::print_plan(install_plan, is_recursive, paths.builtin_ports_directory());
+                Checks::exit_success(VCPKG_LINE_INFO);
+            }
+            else
+            {
+                auto specs = resolve_deps_as_top_level(manifest_scf, default_triplet, features, var_provider);
+
+                auto install_plan = Dependencies::create_feature_install_plan(provider, var_provider, specs, {});
+
+                for (InstallPlanAction& action : install_plan.install_actions)
+                {
+                    action.build_options = install_plan_options;
+                    action.build_options.use_head_version = Build::UseHeadVersion::NO;
+                    action.build_options.editable = Build::Editable::NO;
+                }
+
+                Commands::SetInstalled::perform_and_exit_ex(args,
+                                                            paths,
+                                                            provider,
+                                                            *binaryprovider,
+                                                            var_provider,
+                                                            std::move(install_plan),
+                                                            dry_run ? Commands::DryRun::Yes : Commands::DryRun::No,
+                                                            pkgsconfig);
+            }
         }
 
         const std::vector<FullPackageSpec> specs = Util::fmap(args.command_arguments, [&](auto&& arg) {

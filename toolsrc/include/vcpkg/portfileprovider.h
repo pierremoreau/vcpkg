@@ -6,6 +6,7 @@
 #include <vcpkg/base/util.h>
 
 #include <vcpkg/sourceparagraph.h>
+#include <vcpkg/versions.h>
 
 namespace vcpkg::PortFileProvider
 {
@@ -35,5 +36,52 @@ namespace vcpkg::PortFileProvider
         const VcpkgPaths& paths;
         std::vector<fs::path> overlay_ports;
         mutable std::unordered_map<std::string, SourceControlFileLocation> cache;
+    };
+
+    struct IVersionedPortfileProvider
+    {
+        virtual const std::vector<vcpkg::Versions::VersionSpec>& get_port_versions(
+            const std::string& port_spec) const = 0;
+
+        virtual ExpectedS<const SourceControlFileLocation&> get_control_file(
+            const vcpkg::Versions::VersionSpec& version_spec) const = 0;
+    };
+
+    struct IBaselineProvider
+    {
+        virtual Optional<Versions::VersionSpec> get_baseline_version(const std::string& port_name) const = 0;
+    };
+
+    namespace details
+    {
+        struct BaselineProviderImpl;
+        struct VersionedPortfileProviderImpl;
+    }
+
+    struct VersionedPortfileProvider : IVersionedPortfileProvider, Util::ResourceBase
+    {
+        explicit VersionedPortfileProvider(const vcpkg::VcpkgPaths& paths);
+        ~VersionedPortfileProvider();
+
+        const std::vector<vcpkg::Versions::VersionSpec>& get_port_versions(const std::string& port_spec) const override;
+
+        ExpectedS<const SourceControlFileLocation&> get_control_file(
+            const vcpkg::Versions::VersionSpec& version_spec) const override;
+
+    private:
+        std::unique_ptr<details::VersionedPortfileProviderImpl> m_impl;
+    };
+
+    struct BaselineProvider : IBaselineProvider, Util::ResourceBase
+    {
+        explicit BaselineProvider(const vcpkg::VcpkgPaths& paths, const std::string& baseline);
+        ~BaselineProvider();
+
+        Optional<Versions::VersionSpec> get_baseline_version(const std::string& port_name) const override;
+
+    private:
+        const std::map<std::string, Versions::VersionSpec>& get_baseline_cache() const;
+
+        std::unique_ptr<details::BaselineProviderImpl> m_impl;
     };
 }
