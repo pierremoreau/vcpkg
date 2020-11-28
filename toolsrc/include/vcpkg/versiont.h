@@ -18,8 +18,12 @@ namespace vcpkg
 
         friend struct VersionTMapLess;
 
-        std::string value;
-        int port_version;
+        std::string text() { return m_text; }
+        int port_version() { return m_port_version; }
+
+    private:
+        std::string m_text;
+        int m_port_version;
     };
 
     struct VersionDiff

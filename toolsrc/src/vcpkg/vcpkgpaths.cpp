@@ -393,6 +393,18 @@ If you wish to silence this error and use classic mode, you can:
         vcpkg_dir_info = vcpkg_dir / fs::u8path("info");
         vcpkg_dir_updates = vcpkg_dir / fs::u8path("updates");
 
+        // Versioning paths
+        const auto versioning_tmp = buildtrees / fs::u8path("versioning_tmp");
+        const auto versioning_output = buildtrees / fs::u8path("versioning");
+
+        baselines_dot_git_dir = versioning_tmp / fs::u8path(".baselines.git");
+        baselines_work_tree = versioning_tmp / fs::u8path("baselines-worktree");
+        baselines_output = versioning_output / fs::u8path("baselines");
+
+        versions_dot_git_dir = versioning_tmp / fs::u8path(".versions.git");
+        versions_work_tree = versioning_tmp / fs::u8path("versions-worktree");
+        versions_output = versioning_output / fs::u8path("versions");
+
         ports_cmake = filesystem.canonical(VCPKG_LINE_INFO, scripts / fs::u8path("ports.cmake"));
 
         for (auto&& overlay_triplets_dir : args.overlay_triplets)
@@ -497,7 +509,7 @@ If you wish to silence this error and use classic mode, you can:
     }
 
     void VcpkgPaths::git_checkout_subpath(const VcpkgPaths& paths,
-                                          const std::string& commit_sha,
+                                          StringView commit_sha,
                                           const fs::path& subpath,
                                           const fs::path& local_repo,
                                           const fs::path& destination,
@@ -559,7 +571,7 @@ If you wish to silence this error and use classic mode, you can:
     }
 
     void VcpkgPaths::git_checkout_object(const VcpkgPaths& paths,
-                                         const std::string& git_object,
+                                         StringView git_object,
                                          const fs::path& local_repo,
                                          const fs::path& destination,
                                          const fs::path& dot_git_dir,
@@ -628,26 +640,26 @@ If you wish to silence this error and use classic mode, you can:
         }
     }
 
-    fs::path VcpkgPaths::git_checkout_baseline(const std::string& commit_sha) const
+    fs::path VcpkgPaths::git_checkout_baseline(Files::Filesystem& fs, StringView commit_sha) const
     {
         const fs::path local_repo = this->root;
-        const fs::path destination = m_pimpl->baselines_output(*this) / commit_sha / fs::u8path("baseline.json");
+        const fs::path destination = this->baselines_output / fs::u8path(commit_sha) / fs::u8path("baseline.json");
         const fs::path baseline_subpath = fs::u8path("port_versions") / fs::u8path("baseline.json");
 
-        if (!get_filesystem().exists(destination))
+        if (!fs.exists(destination))
         {
             git_checkout_subpath(*this,
                                  commit_sha,
                                  baseline_subpath,
                                  local_repo,
                                  destination,
-                                 m_pimpl->baselines_dot_git_dir(*this),
-                                 m_pimpl->baselines_worktree(*this));
+                                 this->baselines_dot_git_dir,
+                                 this->baselines_work_tree);
         }
         return destination;
     }
 
-    fs::path VcpkgPaths::git_checkout_port(const std::string& port_name, const std::string& git_tree) const
+    fs::path VcpkgPaths::git_checkout_port(Files::Filesystem& fs, StringView port_name, StringView git_tree) const
     {
         /* Clone a new vcpkg repository instance using the local instance as base.
          *
@@ -658,17 +670,12 @@ If you wish to silence this error and use classic mode, you can:
          * Because of that, it makes sense to use the git hash as the name for the directory.
          */
         const fs::path local_repo = this->root;
-        const fs::path destination = m_pimpl->versions_output(*this) / fs::u8path(git_tree) / fs::u8path(port_name);
+        const fs::path destination = this->versions_output / fs::u8path(git_tree) / fs::u8path(port_name);
 
-        Files::Filesystem& fs = get_filesystem();
         if (!fs.exists(destination / "CONTROL") && !fs.exists(destination / "vcpkg.json"))
         {
-            git_checkout_object(*this,
-                                git_tree,
-                                local_repo,
-                                destination,
-                                m_pimpl->versions_dot_git_dir(*this),
-                                m_pimpl->versions_worktree(*this));
+            git_checkout_object(
+                *this, git_tree, local_repo, destination, this->versions_dot_git_dir, this->versions_work_tree);
         }
         return destination;
     }

@@ -1167,8 +1167,8 @@ namespace vcpkg::Dependencies
             using IBaselineProvider = PortFileProvider::IBaselineProvider;
 
         public:
-            VersionedPackageGraph(IVersionedPortfileProvider& ver_provider,
-                                  IBaselineProvider& base_provider,
+            VersionedPackageGraph(const IVersionedPortfileProvider& ver_provider,
+                                  const IBaselineProvider& base_provider,
                                   const CMakeVars::CMakeVarProvider& var_provider)
                 : m_ver_provider(ver_provider), m_base_provider(base_provider), m_var_provider(var_provider)
             {
@@ -1181,8 +1181,8 @@ namespace vcpkg::Dependencies
             ExpectedS<ActionPlan> finalize_extract_plan();
 
         private:
-            IVersionedPortfileProvider& m_ver_provider;
-            IBaselineProvider& m_base_provider;
+            const IVersionedPortfileProvider& m_ver_provider;
+            const IBaselineProvider& m_base_provider;
             const CMakeVars::CMakeVarProvider& m_var_provider;
 
             struct DepSpec
@@ -1253,7 +1253,7 @@ namespace vcpkg::Dependencies
             VersionSchemeInfo* vsi = nullptr;
             if (scheme == Versions::Scheme::String)
             {
-                vsi = &exacts[ver.value];
+                vsi = &exacts[ver.text()];
             }
             else if (scheme == Versions::Scheme::Relaxed)
             {
@@ -1300,19 +1300,19 @@ namespace vcpkg::Dependencies
             {
                 case Versions::Scheme::String:
                 {
-                    if (a.value != b.value) return VerComp::unk;
-                    if (a.port_version < b.port_version) return VerComp::lt;
-                    if (a.port_version > b.port_version) return VerComp::gt;
+                    if (a.text() != b.text()) return VerComp::unk;
+                    if (a.port_version() < b.port_version()) return VerComp::lt;
+                    if (a.port_version() > b.port_version()) return VerComp::gt;
                     return VerComp::eq;
                 }
                 case Versions::Scheme::Relaxed:
                 {
-                    auto i1 = atoi(a.value.c_str());
-                    auto i2 = atoi(b.value.c_str());
+                    auto i1 = atoi(a.text().c_str());
+                    auto i2 = atoi(b.text().c_str());
                     if (i1 < i2) return VerComp::lt;
                     if (i1 > i2) return VerComp::gt;
-                    if (a.port_version < b.port_version) return VerComp::lt;
-                    if (a.port_version > b.port_version) return VerComp::gt;
+                    if (a.port_version() < b.port_version()) return VerComp::lt;
+                    if (a.port_version() > b.port_version()) return VerComp::gt;
                     return VerComp::eq;
                 }
                 default: Checks::unreachable(VCPKG_LINE_INFO);
@@ -1439,7 +1439,7 @@ namespace vcpkg::Dependencies
 
             if (auto bv = base_ver.get())
             {
-                add_constraint(ref, bv->version, origin);
+                add_constraint(ref, *bv, origin);
             }
 
             for (auto&& f : dep.features)
@@ -1533,7 +1533,7 @@ namespace vcpkg::Dependencies
 
         static Optional<Versions::Version> dep_to_version(const std::string& name,
                                                           const DependencyConstraint& dc,
-                                                          PortFileProvider::IBaselineProvider& base_provider)
+                                                          const PortFileProvider::IBaselineProvider& base_provider)
         {
             auto maybe_cons = to_version(dc);
             if (maybe_cons)
@@ -1542,11 +1542,7 @@ namespace vcpkg::Dependencies
             }
             else
             {
-                auto ret = base_provider.get_baseline_version(name);
-                if (auto p = ret.get())
-                    return std::move(p->version);
-                else
-                    return nullopt;
+                return base_provider.get_baseline_version(name);
             }
         }
 
@@ -1602,9 +1598,8 @@ namespace vcpkg::Dependencies
                 if (auto p_dep_ver = dep_ver.get())
                 {
                     m_roots.push_back(DepSpec{spec, *p_dep_ver, dep.features});
-                    if (auto p_base_ver_spec = base_ver.get())
+                    if (auto p_base_ver = base_ver.get())
                     {
-                        auto p_base_ver = &p_base_ver_spec->version;
                         // Compare version constraint with baseline to only evaluate the "tighter" constraint
                         auto dep_scfl = m_ver_provider.get_control_file({dep.name, *p_dep_ver});
                         auto base_scfl = m_ver_provider.get_control_file({dep.name, *p_base_ver});
@@ -1639,8 +1634,8 @@ namespace vcpkg::Dependencies
                 }
                 else if (auto p_base_ver = base_ver.get())
                 {
-                    m_roots.push_back(DepSpec{spec, p_base_ver->version, dep.features});
-                    add_constraint(node, p_base_ver->version, toplevel.name());
+                    m_roots.push_back(DepSpec{spec, *p_base_ver, dep.features});
+                    add_constraint(node, *p_base_ver, toplevel.name());
                 }
                 else
                 {
@@ -1700,7 +1695,7 @@ namespace vcpkg::Dependencies
                         // Not overridden -- Compare against baseline
                         if (auto baseline = m_base_provider.get_baseline_version(spec.name()))
                         {
-                            if (auto base_node = node.get_node(baseline.get()->version))
+                            if (auto base_node = node.get_node(*baseline.get()))
                             {
                                 if (base_node != p_vnode)
                                 {
@@ -1709,7 +1704,7 @@ namespace vcpkg::Dependencies
                                                            "@",
                                                            new_ver,
                                                            ": baseline required ",
-                                                           baseline.get()->version);
+                                                           *baseline.get());
                                 }
                             }
                         }
@@ -1807,13 +1802,12 @@ namespace vcpkg::Dependencies
         }
     }
 
-    ExpectedS<ActionPlan> create_versioned_install_plan(PortFileProvider::IVersionedPortfileProvider& provider,
-                                                        PortFileProvider::IBaselineProvider& bprovider,
+    ExpectedS<ActionPlan> create_versioned_install_plan(const PortFileProvider::IVersionedPortfileProvider& provider,
+                                                        const PortFileProvider::IBaselineProvider& bprovider,
                                                         const CMakeVars::CMakeVarProvider& var_provider,
                                                         const std::vector<Dependency>& deps,
                                                         const std::vector<DependencyOverride>& overrides,
-                                                        const PackageSpec& toplevel,
-                                                        const CreateInstallPlanOptions& /*options*/)
+                                                        const PackageSpec& toplevel)
     {
         VersionedPackageGraph vpg(provider, bprovider, var_provider);
         for (auto&& o : overrides)

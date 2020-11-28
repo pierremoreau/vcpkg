@@ -5,6 +5,7 @@
 
 #include <vcpkg/configurationdeserializer.h>
 #include <vcpkg/registries.h>
+#include <vcpkg/vcpkgcmdarguments.h>
 #include <vcpkg/vcpkgpaths.h>
 #include <vcpkg/versiondeserializers.h>
 #include <vcpkg/versiont.h>
@@ -84,7 +85,7 @@ namespace
         {
             fs::path registry_path;
 
-            auto version = VersionTDeserializer::instance.visit_object(r, obj);
+            auto version = get_versiont_deserializer_instance().visit_object(r, obj);
 
             r.required_object_field(
                 "version entry", obj, "registry-path", registry_path, Json::PathDeserializer::instance);
@@ -218,6 +219,12 @@ namespace
 
         Optional<VersionT> get_baseline_version(const VcpkgPaths& paths, StringView port_name) const override
         {
+            if (!paths.get_feature_flags().versions)
+            {
+                Checks::check_exit(VCPKG_LINE_INFO,
+                                   "This invocation failed because the `versions` feature flag is not enabled.");
+            }
+
             const auto& baseline_cache = baseline.get([this, &paths] { return load_baseline_versions(paths); });
             auto it = baseline_cache.find(port_name);
             if (it != baseline_cache.end())
@@ -261,26 +268,17 @@ namespace
                 Checks::exit_with_message(VCPKG_LINE_INFO, "Error: `baseline.json` does not have a top-level object.");
             }
 
-            const auto& obj = value.first.object();
-            auto baseline_value = obj.get("default");
-            if (!baseline_value)
+            auto maybe_baseline_versions = parse_baseline_file(paths.get_filesystem(), "default", baseline_file);
+            if (auto baseline_versions = maybe_baseline_versions.get())
             {
-                Checks::exit_with_message(
-                    VCPKG_LINE_INFO, "Error: `baseline.json` does not contain the baseline \"%s\"", "default");
-            }
-
-            Json::Reader r;
-            std::map<std::string, VersionT, std::less<>> result;
-            r.visit_in_key(*baseline_value, "default", result, BaselineDeserializer::instance);
-
-            if (r.errors().empty())
-            {
-                return result;
+                return std::move(*baseline_versions);
             }
             else
             {
-                Checks::exit_with_message(
-                    VCPKG_LINE_INFO, "Error: failed to parse `baseline.json`:\n%s", Strings::join("\n", r.errors()));
+                Checks::exit_with_message(VCPKG_LINE_INFO,
+                                          "Error: failed to parse `%s`:\n%s",
+                                          fs::u8string(baseline_file),
+                                          maybe_baseline_versions.error());
             }
         }
 

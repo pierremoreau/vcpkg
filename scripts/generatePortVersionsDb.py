@@ -92,11 +92,20 @@ def main(ports_path, db_path):
     if not revision:
         print('Couldn\'t fetch current Git revision', file=sys.stderr)
         sys.exit(1)
-    
     rev_file = os.path.join(db_path, revision)
     if os.path.exists(rev_file):
         print(f'Database files already exist for commit {revision}')
         sys.exit(0)
+
+    if (os.path.exists(db_path)):
+        try:
+            shutil.rmtree(db_path)
+        except OSError as e:
+            print(f'Could not delete folder: {db_path}.\nError: {e.strerror}')
+
+    generate_port_versions_db(ports_path=ports_path,
+                              db_path=db_path,
+                              revision=revision)
 
     if (os.path.exists(db_path)):
         try:
