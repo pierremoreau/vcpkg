@@ -44,7 +44,7 @@ def generate_port_versions_db(ports_path, db_path, revision):
         output_filepath = os.path.join(containing_dir, f'{port_name}.json')
         if os.path.exists(output_filepath):
             with open(output_filepath, 'r') as db_file:
-                versions_object = json.loads(db_file)
+                versions_object = json.load(db_file)
                 latest_version = versions_object["versions"][0]
                 baseline_objects['default'][port_name] = {
                     "version-string": latest_version["version-string"],
