@@ -42,7 +42,15 @@ def generate_port_versions_db(ports_path, db_path, revision):
         os.makedirs(containing_dir, exist_ok=True)
 
         output_filepath = os.path.join(containing_dir, f'{port_name}.json')
-        if not os.path.exists(output_filepath):
+        if os.path.exists(output_filepath):
+            with open(output_filepath, 'r') as db_file:
+                versions_object = json.loads(db_file)
+                latest_version = versions_object["versions"][0]
+                baseline_objects['default'][port_name] = {
+                    "version-string": latest_version["version-string"],
+                    "port-version": latest_version["port-version"]
+                }
+        else:
             output = subprocess.run(
                 [os.path.join(SCRIPT_DIRECTORY, '../vcpkg'),
                  'x-history', port_name, '--x-json'],
@@ -98,15 +106,10 @@ def main(ports_path, db_path):
         print(f'Database files already exist for commit {revision}')
         sys.exit(0)
 
-    if (os.path.exists(db_path)):
-        try:
-            shutil.rmtree(db_path)
-        except OSError as e:
-            print(f'Could not delete folder: {db_path}.\nError: {e.strerror}')
-
     generate_port_versions_db(ports_path=ports_path,
                               db_path=db_path,
                               revision=revision)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
