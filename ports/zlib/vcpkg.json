@@ -1,5 +1,5 @@
 {
   "name": "zlib",
-  "version-semver": "1.2.8",
+  "version-semver": "1.2.10",
   "description": "A compression library"
 }
