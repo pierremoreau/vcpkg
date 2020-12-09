@@ -1,64 +1,31 @@
-vcpkg_from_github(
-    OUT_SOURCE_PATH SOURCE_PATH
-    REPO fmtlib/fmt
-    REF 7bdf0628b1276379886c7f6dda2cef2b3b374f0b # v7.1.3
-    SHA512 52ea8f9d2c0cb52ec3a740e38fcdfd6a0318566e3b599bd2e8d557168642d005c0a59bc213cff2641a88fed3bb771d15f46c39035ccd64809569af982aba47aa
-    HEAD_REF master
-    PATCHES fix-warning4189.patch
+include(vcpkg_common_functions)
+set(SOURCE_PATH ${CURRENT_BUILDTREES_DIR}/src/fmt-3.0.0)
+vcpkg_download_distfile(ARCHIVE_FILE
+    URLS "https://github.com/fmtlib/fmt/archive/3.0.0.tar.gz"
+    FILENAME "fmt-3.0.0.tar.gz"
+    SHA512 20c9b1ffe8b46cb5d22015122fc698a75ad854709d3de1a1316b6040d86f54bada4e6d7263f2f1fd94cb13ac37ee9447c162c6aec3f3af650455e8a8a9804871
 )
+vcpkg_extract_source_archive(${ARCHIVE_FILE})
+
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}
-    PREFER_NINJA
     OPTIONS
-        -DFMT_CMAKE_DIR=share/fmt
         -DFMT_TEST=OFF
-        -DFMT_DOC=OFF
 )
 
+vcpkg_build_cmake()
+
 vcpkg_install_cmake()
-file(INSTALL ${SOURCE_PATH}/LICENSE.rst DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
-if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
-    if(VCPKG_TARGET_IS_WINDOWS)
-        if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-            if(EXISTS "${CURRENT_PACKAGES_DIR}/debug/lib/fmtd.dll")
-                file(MAKE_DIRECTORY ${CURRENT_PACKAGES_DIR}/debug/bin)
-                file(RENAME ${CURRENT_PACKAGES_DIR}/debug/lib/fmtd.dll ${CURRENT_PACKAGES_DIR}/debug/bin/fmtd.dll)
-            endif()
-        endif()
-        if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
-            if(EXISTS "${CURRENT_PACKAGES_DIR}/lib/fmt.dll")
-                file(MAKE_DIRECTORY ${CURRENT_PACKAGES_DIR}/bin)
-                file(RENAME ${CURRENT_PACKAGES_DIR}/lib/fmt.dll ${CURRENT_PACKAGES_DIR}/bin/fmt.dll)
-            endif()
-        endif()
-    endif()
-
-    vcpkg_replace_string(${CURRENT_PACKAGES_DIR}/include/fmt/core.h
-        "defined(FMT_SHARED)"
-        "1"
-    )
-endif()
+file(INSTALL ${SOURCE_PATH}/LICENSE.rst DESTINATION ${CURRENT_PACKAGES_DIR}/share/fmt RENAME copyright)
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
+file(REMOVE ${CURRENT_PACKAGES_DIR}/include/fmt/format.cc)
+file(REMOVE ${CURRENT_PACKAGES_DIR}/include/fmt/ostream.cc)
+file(RENAME ${CURRENT_PACKAGES_DIR}/lib/cmake/fmt/fmt-config-version.cmake ${CURRENT_PACKAGES_DIR}/share/fmt/fmt-config-version.cmake)
+file(RENAME ${CURRENT_PACKAGES_DIR}/lib/cmake/fmt/fmt-config.cmake ${CURRENT_PACKAGES_DIR}/share/fmt/fmt-config.cmake)
+file(RENAME ${CURRENT_PACKAGES_DIR}/lib/cmake/fmt/fmt-targets-release.cmake ${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-release.cmake)
+file(RENAME ${CURRENT_PACKAGES_DIR}/lib/cmake/fmt/fmt-targets.cmake ${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets.cmake)
+file(RENAME ${CURRENT_PACKAGES_DIR}/lib/cmake ${CURRENT_PACKAGES_DIR}/cmake)
+file(RENAME ${CURRENT_PACKAGES_DIR}/debug/lib/cmake/fmt/fmt-targets.cmake ${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-debug.cmake)
+file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/lib/cmake)
 
-vcpkg_fixup_cmake_targets()
-vcpkg_fixup_pkgconfig()
-
-if(VCPKG_TARGET_IS_WINDOWS)
-    if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-        vcpkg_replace_string(${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-debug.cmake
-            "lib/fmtd.dll"
-            "bin/fmtd.dll"
-        )
-    endif()
-    if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
-        vcpkg_replace_string(${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-release.cmake
-            "lib/fmt.dll"
-            "bin/fmt.dll"
-        )
-    endif()
-endif()
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
-
-# Handle post-build CMake instructions
 vcpkg_copy_pdbs()
-file(INSTALL ${CMAKE_CURRENT_LIST_DIR}/usage DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT})
