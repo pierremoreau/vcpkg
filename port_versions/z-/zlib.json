@@ -47,12 +47,12 @@
     },
     {
       "git-tree": "47225f06e15a43089ccf8e87184c36cdb5034aeb",
-      "version-string": "1.2.10",
+      "version-semver": "1.2.10",
       "port-version": 0
     },
     {
       "git-tree": "d39069e6eaa9f7286324575e7a5ba0e9e254d767",
-      "version-string": "1.2.8",
+      "version-semver": "1.2.8",
       "port-version": 0
     }
   ]
