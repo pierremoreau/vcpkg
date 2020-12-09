@@ -1909,7 +1909,7 @@
             "port-version": 3
         },
         "fmt": {
-            "version-semver": "6.0.0",
+            "version-semver": "7.0.2",
             "port-version": 0
         },
         "folly": {
