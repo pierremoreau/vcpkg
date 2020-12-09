@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO fmtlib/fmt
-    REF b9d749095e3397f154e2938f96dd11912f2d9300#version 7.0.2
-    SHA512 5e81369ba97fb9e7fbaeed87b23fc7f1db1459d5c67eba1d92a697840fa004097d714127381aa2aa1437f5730b27e38a71e3ddf6a4a73c8d5eeaa32b3efb3d80
+    REF 4fe0b11195b7cd71f39253c44db2c9dddf6b82d4#version 7.1.0
+    SHA512 1cb2eac5abcec0a002c505a3de04284f89a6b31923edb6868cf9e9ac2803c3985ab62e2bff55da49a30def8476bfed205cf6a5b40a03a1d3df1292feb5352e86
     HEAD_REF master
     PATCHES fix-warning4189.patch
 )
@@ -51,7 +51,7 @@ if(VCPKG_TARGET_IS_WINDOWS)
         )
     endif()
     if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
-        vcpkg_replace_string(${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-debug.cmake
+        vcpkg_replace_string(${CURRENT_PACKAGES_DIR}/share/fmt/fmt-targets-release.cmake
             "lib/fmt.dll"
             "bin/fmt.dll"
         )
@@ -59,4 +59,6 @@ if(VCPKG_TARGET_IS_WINDOWS)
 endif()
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
 
+# Handle post-build CMake instructions
 vcpkg_copy_pdbs()
+file(INSTALL ${CMAKE_CURRENT_LIST_DIR}/usage DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT})
