@@ -6165,8 +6165,8 @@
             "port-version": 0
         },
         "zlib": {
-            "version-semver": "1.2.11",
-            "port-version": 1
+            "version-semver": "1.2.8",
+            "port-version": 0
         },
         "zookeeper": {
             "version-string": "3.5.5-1",
