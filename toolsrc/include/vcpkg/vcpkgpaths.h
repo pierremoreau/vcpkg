@@ -97,6 +97,9 @@ namespace vcpkg
         fs::path buildsystems_msbuild_targets;
         fs::path buildsystems_msbuild_props;
 
+        fs::path version_files;
+        fs::path local_baseline_filepath;
+
         fs::path vcpkg_dir;
         fs::path vcpkg_dir_status_file;
         fs::path vcpkg_dir_info;
@@ -119,6 +122,8 @@ namespace vcpkg
         fs::path git_checkout_baseline(Files::Filesystem& filesystem, StringView commit_sha) const;
         fs::path git_checkout_port(Files::Filesystem& filesystem, StringView port_name, StringView git_tree) const;
         ExpectedS<std::string> git_show(const std::string& treeish, const fs::path& dot_git_dir) const;
+
+        ExpectedS<std::map<std::string, std::string, std::less<>>> git_get_local_port_treeish_map() const;
 
         Optional<const Json::Object&> get_manifest() const;
         Optional<const fs::path&> get_manifest_path() const;
